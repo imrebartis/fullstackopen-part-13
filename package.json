@@ -1,8 +1,20 @@
 {
+  "name": "fullstackopen-part-13",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "start": "cross-env NODE_ENV=production node index.js",
+    "dev": "cross-env NODE_ENV=development nodemon index.js"
+  },
   "dependencies": {
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
     "pg": "^8.13.1",
     "sequelize": "^6.37.5"
+  },
+  "devDependencies": {
+    "cross-env": "^7.0.3",
+    "nodemon": "^3.1.7"
   }
 }
