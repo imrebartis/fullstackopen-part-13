@@ -41,20 +41,17 @@ router.get('/:id', blogFinder, async (req, res) => {
 router.delete('/:id', blogFinder, async (req, res) => {
   if (req.blog) {
     await req.blog.destroy();
-    res.status(204).end();
+    res.status(200).json({ message: 'Blog deleted successfully' });
   } else {
     res.status(404).json({ error: 'Blog not found' });
   }
 });
 
 router.put('/:id', blogFinder, async (req, res) => {
-  if ( req.blog) {
-    req.blog.title = req.body.title
-    req.blog.author = req.body.author
-    req.blog.url = req.body.url
+  if (req.blog) {
     req.blog.likes = req.body.likes
     await req.blog.save()
-    res.json( req.blog)
+    res.json(req.blog)
   } else {
     res.status(404).end()
   }
