@@ -1,6 +1,9 @@
 const router = require('express').Router()
+require('express-async-errors')
+const validator = require('validator')
 
 const Blog = require('../models/blog')
+const { errorHandler } = require('../util/middleware')
 
 const blogFinder = async (req, res, next) => {
     req.blog = await Blog.findByPk(req.params.id)
@@ -13,48 +16,71 @@ router.get('/', async (req, res) => {
   res.json(blogs)
 })
 
-router.post('/', async (req, res) => {
+router.post('/', async (req, res, next) => {
   try {
+    const { url } = req.body
+
+    if (!url || !validator.isURL(String(url))) {
+      console.log('Invalid URL')
+      const error = new Error('Invalid URL')
+      error.name = 'ValidationError'
+      throw error
+    }
+
     const blog = await Blog.create(req.body)
-    return res.json(blog)
+    res.json(blog)
   } catch (error) {
-    return res.status(400).json({ error })
+    next(error)
   }
 })
 
 router.get('/:id', blogFinder, async (req, res) => {
+  res.json(req.blog)
+})
+
+router.delete('/:id', blogFinder, async (req, res, next) => {
   try {
-    const id = parseInt(req.params.id, 10)
-    if (isNaN(id)) {
-      return res.status(400).json({ error: 'Invalid ID' })
+    if (req.blog) {
+      await req.blog.destroy()
+      res.status(200).json({ message: 'Blog deleted successfully' })
+    } else {
+      const error = new Error('Blog not found')
+      error.name = 'NotFoundError'
+      throw error
     }
-    if (!req.blog) {
-      return res.status(404).json({ error: 'Blog not found' })
-    }
-    console.log(req.blog.toJSON())
-    res.json(req.blog)
   } catch (error) {
-    res.status(500).json({ error: error.message })
+    next(error)
   }
 })
 
-router.delete('/:id', blogFinder, async (req, res) => {
-  if (req.blog) {
-    await req.blog.destroy();
-    res.status(200).json({ message: 'Blog deleted successfully' });
-  } else {
-    res.status(404).json({ error: 'Blog not found' });
-  }
-});
-
-router.put('/:id', blogFinder, async (req, res) => {
-  if (req.blog) {
-    req.blog.likes = req.body.likes
-    await req.blog.save()
-    res.json(req.blog)
-  } else {
-    res.status(404).end()
+router.put('/:id', blogFinder, async (req, res, next) => {
+  try {
+    if (req.blog) {
+      if (req.body.likes !== undefined) {
+        if (typeof req.body.likes === 'number') {
+          req.blog.likes = req.body.likes
+          await req.blog.save()
+          res.json(req.blog)
+        } else {
+          const error = new Error('Likes field must be a number')
+          error.name = 'ValidationError'
+          throw error
+        }
+      } else {
+        const error = new Error('Likes field is required')
+        error.name = 'ValidationError'
+        throw error
+      }
+    } else {
+      const error = new Error('Blog not found')
+      error.name = 'NotFoundError'
+      throw error
+    }
+  } catch (error) {
+    next(error)
   }
 })
+
+router.use(errorHandler)
 
 module.exports = router

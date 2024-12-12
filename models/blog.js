@@ -12,7 +12,8 @@ Blog.init(
       autoIncrement: true
     },
     author: {
-      type: DataTypes.STRING
+      type: DataTypes.STRING,
+      defaultValue: 'Anonymous'
     },
     url: {
       type: DataTypes.STRING,
@@ -23,7 +24,8 @@ Blog.init(
       allowNull: false
     },
     likes: {
-      type: DataTypes.INTEGER
+      type: DataTypes.INTEGER,
+      defaultValue: 0
     }
   },
   {
