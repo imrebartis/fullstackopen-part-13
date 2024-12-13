@@ -11,7 +11,13 @@ const errorHandler = (err, req, res, next) => {
   }
 
   if (err.name === 'NotFoundError') {
-    return res.status(404).json({ error: 'Blog not found' })
+    return res.status(404).json({ error: 'Resource not found', details: err.message })
+  }
+
+  if (err.name === 'SequelizeUniqueConstraintError') {
+    return res
+      .status(400)
+      .json({ error: 'Unique constraint error', details: err.message })
   }
 
   return res.status(500).json({ error: 'Internal server error' })
