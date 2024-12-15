@@ -3,10 +3,16 @@ require('express-async-errors')
 const bcryptjs = require('bcryptjs')
 
 const { User } = require('../models')
+const { Blog } = require('../models')
 
 router.get('/', async (req, res, next) => {
   try {
-    const users = await User.findAll()
+    const users = await User.findAll({
+      include: {
+        model: Blog
+      },
+      attributes: { exclude: ['userId', 'passwordHash'] }
+    })
     res.json(users)
   } catch (error) {
     next(error)

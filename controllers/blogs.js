@@ -3,21 +3,33 @@ require('express-async-errors')
 const validator = require('validator')
 
 const Blog = require('../models/blog')
+const User = require('../models/user')
 const middleware = require('../util/middleware')
 
 const blogFinder = async (req, res, next) => {
-    req.blog = await Blog.findByPk(req.params.id)
-    next()
+  req.blog = await Blog.findByPk(req.params.id, {
+    include: {
+      model: User,
+      attributes: ['id', 'username', 'name']
+    }
+  })
+  next()
 }
 
 router.get('/', async (req, res) => {
-  const blogs = await Blog.findAll()
+  const blogs = await Blog.findAll({
+    attributes: { exclude: ['userId'] },
+    include: { model: User, attributes: ['name'] }
+  })
   console.log(JSON.stringify(blogs, null, 2))
   res.json(blogs)
 })
 
 router.post('/', middleware.tokenExtractor, async (req, res, next) => {
   try {
+    const user = await User.findOne()
+    const blog = await Blog.create({ ...req.body, userId: user.id })
+
     const { url } = req.body
 
     if (!url || !validator.isURL(String(url))) {
@@ -26,7 +38,6 @@ router.post('/', middleware.tokenExtractor, async (req, res, next) => {
       throw error
     }
 
-    const blog = await Blog.create(req.body)
     res.json(blog)
   } catch (error) {
     next(error)
@@ -37,16 +48,20 @@ router.get('/:id', blogFinder, async (req, res) => {
   res.json(req.blog)
 })
 
-router.delete('/:id', blogFinder, async (req, res, next) => {
+router.delete('/:id', blogFinder, middleware.tokenExtractor, async (req, res, next) => {
   try {
-    if (req.blog) {
-      await req.blog.destroy()
-      res.status(200).json({ message: 'Blog deleted successfully' })
-    } else {
+    if (!req.blog) {
       const error = new Error('Blog not found')
       error.name = 'NotFoundError'
       throw error
     }
+
+    if (req.blog.userId !== req.decodedToken.id) {
+      return res.status(403).json({ error: 'You are not authorized to delete this blog' })
+    }
+
+    await req.blog.destroy()
+    res.status(200).json({ message: 'Blog deleted successfully' })
   } catch (error) {
     next(error)
   }

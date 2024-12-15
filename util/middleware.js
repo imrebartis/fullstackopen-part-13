@@ -1,4 +1,7 @@
-const SECRET = require("../util/config")
+const jwt = require('jsonwebtoken')
+require('dotenv').config()
+
+const { SECRET } = require('../util/config')
 
 const errorHandler = (err, req, res, next) => {
   console.error(err.name)
@@ -25,57 +28,33 @@ const errorHandler = (err, req, res, next) => {
       .json({ error: 'Unique constraint error', details: err.message })
   }
 
-  return res.status(500).json({ error: 'Internal server error', details: err.message })
+  return res
+    .status(500)
+    .json({ error: 'Internal server error', details: err.message })
 }
 
 const unknownEndpoint = (request, response) => {
   response.status(404).send({ error: 'unknown endpoint' })
 }
 
-const tokenExtractor = (request, response, next) => {
-  const authorization = request.get('authorization')
-  if (authorization && authorization.startsWith('Bearer ')) {
-    request.token = authorization.replace('Bearer ', '')
-  }
-  next()
-}
-
-const userExtractor = async (request, response, next) => {
-  if (!request.token) {
-    return response.status(401).json({ error: 'token missing' })
-  }
-
-  let decodedToken
-
-  try {
-    decodedToken = jwt.verify(request.token, SECRET)
-  } catch (error) {
-    if (error instanceof jwt.JsonWebTokenError) {
-      if (error.message === 'jwt expired') {
-        return response.status(401).json({ error: 'token expired' })
-      }
-      return next({ name: 'JsonWebTokenError', message: 'invalid token' })
+const tokenExtractor = (req, res, next) => {
+  const authorization = req.get('authorization')
+  if (authorization && authorization.toLowerCase().startsWith('bearer ')) {
+    try {
+      req.decodedToken = jwt.verify(authorization.substring(7), SECRET)
+    } catch (error) {
+      console.log(error)
+      return res.status(401).json({ error: 'token invalid' })
     }
-    return next(error)
+  } else {
+    return res.status(401).json({ error: 'token missing' })
   }
 
-  if (!decodedToken.id) {
-    return response.status(401).json({ error: 'token invalid' })
-  }
-
-  const user = await User.findById(decodedToken.id)
-
-  if (!user) {
-    return response.status(404).json({ error: 'user not found' })
-  }
-
-  request.user = user
   next()
 }
 
 module.exports = {
   errorHandler,
   tokenExtractor,
-  userExtractor,
   unknownEndpoint
 }
