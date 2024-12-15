@@ -1,8 +1,8 @@
 const router = require('express').Router()
 require('express-async-errors')
+const bcryptjs = require('bcryptjs')
 
 const { User } = require('../models')
-const { errorHandler } = require('../util/middleware')
 
 router.get('/', async (req, res, next) => {
   try {
@@ -15,7 +15,17 @@ router.get('/', async (req, res, next) => {
 
 router.post('/', async (req, res, next) => {
   try {
-    const user = await User.create(req.body)
+    const { username, password, name } = req.body
+
+    const saltRounds = 10
+    const passwordHash = await bcryptjs.hash(password, saltRounds)
+
+    const user = await User.create({
+      username,
+      name,
+      passwordHash
+    })
+
     res.json(user)
   } catch (error) {
     if (error.name === 'SequelizeUniqueConstraintError') {
@@ -34,7 +44,7 @@ router.get('/:id', async (req, res, next) => {
       throw error
     }
 
-    const user = await User.findByPk(req.params.id)
+    const user = await User.findByPk(id)
     if (user) {
       res.json(user)
     } else {
@@ -82,7 +92,5 @@ router.delete('/:username', async (req, res, next) => {
     next(error)
   }
 })
-
-router.use(errorHandler)
 
 module.exports = router

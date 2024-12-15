@@ -3,7 +3,7 @@ require('express-async-errors')
 const validator = require('validator')
 
 const Blog = require('../models/blog')
-const { errorHandler } = require('../util/middleware')
+const middleware = require('../util/middleware')
 
 const blogFinder = async (req, res, next) => {
     req.blog = await Blog.findByPk(req.params.id)
@@ -16,12 +16,11 @@ router.get('/', async (req, res) => {
   res.json(blogs)
 })
 
-router.post('/', async (req, res, next) => {
+router.post('/', middleware.tokenExtractor, async (req, res, next) => {
   try {
     const { url } = req.body
 
     if (!url || !validator.isURL(String(url))) {
-      console.log('Invalid URL')
       const error = new Error('Invalid URL')
       error.name = 'ValidationError'
       throw error
@@ -80,7 +79,5 @@ router.put('/:id', blogFinder, async (req, res, next) => {
     next(error)
   }
 })
-
-router.use(errorHandler)
 
 module.exports = router

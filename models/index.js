@@ -1,8 +1,12 @@
 const Blog = require('./blog')
 const User = require('./user')
 
-Blog.sync()
-User.sync()
+const syncDatabase = async () => {
+  await Blog.sync({ alter: true })
+  await User.sync({ alter: true })
+}
+
+syncDatabase()
 
 module.exports = {
   Blog,
