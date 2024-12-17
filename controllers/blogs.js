@@ -1,6 +1,7 @@
 const router = require('express').Router()
 require('express-async-errors')
 const validator = require('validator')
+const { Op } = require('sequelize')
 
 const Blog = require('../models/blog')
 const User = require('../models/user')
@@ -17,9 +18,14 @@ const blogFinder = async (req, res, next) => {
 }
 
 router.get('/', async (req, res) => {
+  const where = {}
+  if (req.query.search) {
+    where.title = { [Op.iLike]: `%${req.query.search}%` }
+  }
   const blogs = await Blog.findAll({
     attributes: { exclude: ['userId'] },
-    include: { model: User, attributes: ['name'] }
+    include: { model: User, attributes: ['name'] },
+    where
   })
   console.log(JSON.stringify(blogs, null, 2))
   res.json(blogs)
@@ -48,24 +54,31 @@ router.get('/:id', blogFinder, async (req, res) => {
   res.json(req.blog)
 })
 
-router.delete('/:id', blogFinder, middleware.tokenExtractor, async (req, res, next) => {
-  try {
-    if (!req.blog) {
-      const error = new Error('Blog not found')
-      error.name = 'NotFoundError'
-      throw error
-    }
+router.delete(
+  '/:id',
+  blogFinder,
+  middleware.tokenExtractor,
+  async (req, res, next) => {
+    try {
+      if (!req.blog) {
+        const error = new Error('Blog not found')
+        error.name = 'NotFoundError'
+        throw error
+      }
 
-    if (req.blog.userId !== req.decodedToken.id) {
-      return res.status(403).json({ error: 'You are not authorized to delete this blog' })
-    }
+      if (req.blog.userId !== req.decodedToken.id) {
+        return res
+          .status(403)
+          .json({ error: 'You are not authorized to delete this blog' })
+      }
 
-    await req.blog.destroy()
-    res.status(200).json({ message: 'Blog deleted successfully' })
-  } catch (error) {
-    next(error)
+      await req.blog.destroy()
+      res.status(200).json({ message: 'Blog deleted successfully' })
+    } catch (error) {
+      next(error)
+    }
   }
-})
+)
 
 router.put('/:id', blogFinder, async (req, res, next) => {
   try {
