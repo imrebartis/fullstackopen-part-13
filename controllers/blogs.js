@@ -19,7 +19,7 @@ const blogFinder = async (req, res, next) => {
 
 router.get('/', async (req, res) => {
   const where = {}
-  const search = req.query.search.trim()
+  const search = req.query.search?.trim()
   if (search) {
     where[Op.or] = [
       { title: { [Op.iLike]: `%${search}%` } },
@@ -29,6 +29,9 @@ router.get('/', async (req, res) => {
   const blogs = await Blog.findAll({
     attributes: { exclude: ['userId'] },
     include: { model: User, attributes: ['name'] },
+    order: [
+      ['likes', 'DESC'],
+    ],
     where
   })
   console.log(JSON.stringify(blogs, null, 2))
