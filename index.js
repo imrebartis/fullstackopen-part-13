@@ -18,10 +18,15 @@ app.use('/api/login', loginRouter)
 app.use('/api/authors', authorRouter)
 
 const start = async () => {
-  await connectToDatabase()
-  app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`)
-  })
+  try {
+    await connectToDatabase()
+    console.log('Database connected!')
+    app.listen(PORT, () => {
+      console.log(`Server running on port ${PORT}`)
+    })
+  } catch (error) {
+    console.error('Error connecting to the database:', error)
+  }
 }
 
 app.use(middleware.unknownEndpoint)
