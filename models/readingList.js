@@ -16,12 +16,12 @@ ReadingList.init(
       allowNull: false,
       defaultValue: false
     },
-    user_id: {
+    userId: {
       type: DataTypes.INTEGER,
       allowNull: false,
       references: { model: 'users', key: 'id' }
     },
-    blog_id: {
+    blogId: {
       type: DataTypes.INTEGER,
       allowNull: false,
       references: { model: 'blogs', key: 'id' }
@@ -31,7 +31,7 @@ ReadingList.init(
     sequelize,
     underscored: true,
     timestamps: false,
-    modelName: 'reading_lists'
+    modelName: 'reading_list'
   }
 )
 

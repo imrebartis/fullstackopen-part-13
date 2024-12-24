@@ -9,7 +9,8 @@ router.get('/', async (req, res, next) => {
   try {
     const users = await User.findAll({
       include: {
-        model: Blog
+        model: Blog,
+        through: { attributes: [] }
       },
       attributes: { exclude: ['userId', 'passwordHash'] }
     })
@@ -50,7 +51,13 @@ router.get('/:id', async (req, res, next) => {
       throw error
     }
 
-    const user = await User.findByPk(id)
+    const user = await User.findByPk(id, {
+      include: {
+        model: Blog
+      },
+      attributes: { exclude: ['userId', 'passwordHash'] },
+      through: { attributes: [] }
+    })
     if (user) {
       res.json(user)
     } else {

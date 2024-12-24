@@ -1,6 +1,6 @@
 const { DataTypes } = require('sequelize')
 
-const  { validateYear } = require('../util/validators')
+const { validateYear } = require('../util/validators')
 
 module.exports = {
   up: async ({ context: queryInterface }) => {
