@@ -2,17 +2,16 @@ const router = require('express').Router()
 require('express-async-errors')
 const bcryptjs = require('bcryptjs')
 
-const { User } = require('../models')
-const { Blog } = require('../models')
+const { User, Blog, ReadingList } = require('../models')
 
 router.get('/', async (req, res, next) => {
   try {
     const users = await User.findAll({
       include: {
         model: Blog,
-        through: { attributes: [] }
+        attributes: { exclude: ['userId', 'createdAt', 'updatedAt'] }
       },
-      attributes: { exclude: ['userId', 'passwordHash'] }
+      attributes: { exclude: ['userId', 'passwordHash', 'createdAt', 'updatedAt'] }
     })
     res.json(users)
   } catch (error) {
@@ -52,11 +51,21 @@ router.get('/:id', async (req, res, next) => {
     }
 
     const user = await User.findByPk(id, {
-      include: {
-        model: Blog
-      },
-      attributes: { exclude: ['userId', 'passwordHash'] },
-      through: { attributes: [] }
+      include: [
+        {
+          model: Blog,
+          as: 'readings',
+          attributes: { exclude: ['userId', 'createdAt', 'updatedAt'] },
+          through: {
+            model: ReadingList,
+            as: 'readinglists',
+            attributes: ['id', 'read']
+          }
+        }
+      ],
+      attributes: {
+        exclude: ['userId', 'passwordHash', 'createdAt', 'updatedAt']
+      }
     })
     if (user) {
       res.json(user)
