@@ -50,6 +50,8 @@ router.get('/:id', async (req, res, next) => {
       throw error
     }
 
+    const where = req.query?.read && { read: req.query.read === 'true' } || {}
+
     const user = await User.findByPk(id, {
       include: [
         {
@@ -59,7 +61,8 @@ router.get('/:id', async (req, res, next) => {
           through: {
             model: ReadingList,
             as: 'readinglists',
-            attributes: ['id', 'read']
+            attributes: ['id', 'read'],
+            where
           }
         }
       ],

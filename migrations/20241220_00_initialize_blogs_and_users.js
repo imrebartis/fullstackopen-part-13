@@ -63,11 +63,15 @@ module.exports = {
       }
     })
 
-    await queryInterface.addColumn('blogs', 'user_id', {
-      type: DataTypes.INTEGER,
-      allowNull: false,
-      references: { model: 'users', key: 'id' }
-    })
+    const tableDefinition = await queryInterface.describeTable('blogs')
+
+    if (!tableDefinition.user_id) {
+      await queryInterface.addColumn('blogs', 'user_id', {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+        references: { model: 'users', key: 'id' }
+      })
+    }
   },
   down: async ({ context: queryInterface }) => {
     await queryInterface.dropTable('blogs')
