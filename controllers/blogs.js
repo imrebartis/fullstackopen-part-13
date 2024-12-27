@@ -5,7 +5,7 @@ const { Op } = require('sequelize')
 
 const Blog = require('../models/blog')
 const User = require('../models/user')
-const middleware = require('../util/middleware')
+const { tokenExtractor, userExtractor } = require('../util/middleware')
 
 const blogFinder = async (req, res, next) => {
   req.blog = await Blog.findByPk(req.params.id, {
@@ -38,12 +38,11 @@ router.get('/', async (req, res) => {
   res.json(blogs)
 })
 
-router.post('/', middleware.tokenExtractor, async (req, res, next) => {
+router.post('/', tokenExtractor, userExtractor, async (req, res, next) => {
   try {
-    const user = await User.findOne()
-    const blog = await Blog.create({ ...req.body, userId: user.id })
-
+    const user = req.user
     const { url } = req.body
+    const blog = await Blog.create({ ...req.body, userId: user.id })
 
     if (!url || !validator.isURL(String(url))) {
       const error = new Error('Invalid URL')
@@ -64,7 +63,7 @@ router.get('/:id', blogFinder, async (req, res) => {
 router.delete(
   '/:id',
   blogFinder,
-  middleware.tokenExtractor,
+  tokenExtractor,
   async (req, res, next) => {
     try {
       if (!req.blog) {
