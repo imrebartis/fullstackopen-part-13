@@ -22,14 +22,6 @@ const main = async () => {
     )
     console.log('Active connections terminated successfully.')
 
-    // Drop the users table
-    await sequelize.query("DROP TABLE IF EXISTS users", { type: QueryTypes.RAW })
-    console.log('Table users dropped successfully.')
-
-    // Drop the blogs table
-    await sequelize.query("DROP TABLE IF EXISTS blogs", { type: QueryTypes.RAW })
-    console.log('Table blogs dropped successfully.')
-
     // Run the equivalent of \d to describe tables
     const tables = await sequelize.query(
       "SELECT * FROM information_schema.tables WHERE table_schema = 'public';",
@@ -46,9 +38,9 @@ const main = async () => {
     )
     console.log('SequelizeMeta table created successfully.')
 
-    // Run the query to check the SequelizeMeta table
+    // Run the query to check the migrations table
     const migrations = await sequelize.query(
-      'SELECT * FROM "SequelizeMeta";',
+      'SELECT * FROM migrations;',
       { type: QueryTypes.SELECT }
     )
     console.log('Migrations:', migrations)

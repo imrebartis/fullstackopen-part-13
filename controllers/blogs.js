@@ -1,11 +1,14 @@
 const router = require('express').Router()
 require('express-async-errors')
-const validator = require('validator')
+const { body, validationResult } = require('express-validator')
 const { Op } = require('sequelize')
 
 const Blog = require('../models/blog')
 const User = require('../models/user')
-const { tokenExtractor, userExtractor } = require('../util/middleware')
+const {
+  tokenExtractor,
+  sessionChecker
+} = require('../util/middleware')
 
 const blogFinder = async (req, res, next) => {
   req.blog = await Blog.findByPk(req.params.id, {
@@ -29,32 +32,34 @@ router.get('/', async (req, res) => {
   const blogs = await Blog.findAll({
     attributes: { exclude: ['userId'] },
     include: { model: User, attributes: ['name'] },
-    order: [
-      ['likes', 'DESC'],
-    ],
+    order: [['likes', 'DESC']],
     where
   })
   console.log(JSON.stringify(blogs, null, 2))
   res.json(blogs)
 })
 
-router.post('/', tokenExtractor, userExtractor, async (req, res, next) => {
-  try {
-    const user = req.user
-    const { url } = req.body
-    const blog = await Blog.create({ ...req.body, userId: user.id })
-
-    if (!url || !validator.isURL(String(url))) {
-      const error = new Error('Invalid URL')
-      error.name = 'ValidationError'
-      throw error
+router.post(
+  '/',
+  tokenExtractor,
+  sessionChecker,
+  body('title').notEmpty().withMessage('Title is required'),
+  body('url').isURL().withMessage('URL must be valid'),
+  async (req, res, next) => {
+    const errors = validationResult(req)
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() })
     }
 
-    res.json(blog)
-  } catch (error) {
-    next(error)
+    try {
+      const user = req.user
+      const blog = await Blog.create({ ...req.body, userId: user.id })
+      res.json(blog)
+    } catch (error) {
+      next(error)
+    }
   }
-})
+)
 
 router.get('/:id', blogFinder, async (req, res) => {
   res.json(req.blog)
@@ -64,17 +69,20 @@ router.delete(
   '/:id',
   blogFinder,
   tokenExtractor,
+  sessionChecker,
   async (req, res, next) => {
+    const { blog, user } = req
+
     try {
-      if (!req.blog) {
+      if (!blog) {
         const error = new Error('Blog not found')
         error.name = 'NotFoundError'
         throw error
       }
 
-      if (req.blog.userId !== req.decodedToken.id) {
+      if (blog.userId !== user.id) {
         return res
-          .status(403)
+          .status(401)
           .json({ error: 'You are not authorized to delete this blog' })
       }
 
@@ -86,32 +94,46 @@ router.delete(
   }
 )
 
-router.put('/:id', blogFinder, async (req, res, next) => {
-  try {
-    if (req.blog) {
-      if (req.body.likes !== undefined) {
-        if (typeof req.body.likes === 'number') {
-          req.blog.likes = req.body.likes
-          await req.blog.save()
-          res.json(req.blog)
+router.put(
+  '/:id',
+  blogFinder,
+  tokenExtractor,
+  sessionChecker,
+  async (req, res, next) => {
+    const { blog, user, body } = req
+
+    if (blog.userId !== user.id) {
+      return res
+        .status(401)
+        .json({ error: 'You are not authorized to update this blog' })
+    }
+
+    try {
+      if (blog) {
+        if (body.likes !== undefined) {
+          if (typeof body.likes === 'number') {
+            blog.likes = body.likes
+            await blog.save()
+            res.json(blog)
+          } else {
+            const error = new Error('Likes field must be a number')
+            error.name = 'ValidationError'
+            throw error
+          }
         } else {
-          const error = new Error('Likes field must be a number')
+          const error = new Error('Likes field is required')
           error.name = 'ValidationError'
           throw error
         }
       } else {
-        const error = new Error('Likes field is required')
-        error.name = 'ValidationError'
+        const error = new Error('Blog not found')
+        error.name = 'NotFoundError'
         throw error
       }
-    } else {
-      const error = new Error('Blog not found')
-      error.name = 'NotFoundError'
-      throw error
+    } catch (error) {
+      next(error)
     }
-  } catch (error) {
-    next(error)
   }
-})
+)
 
 module.exports = router
